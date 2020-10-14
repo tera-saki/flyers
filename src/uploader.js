@@ -9,7 +9,7 @@ const googleDrive = new GoogleDrive(credentialsPath, tokenPath)
 async function sendAlert (res) {
   const fileId = res.data.id
   const url = await googleDrive.getWebViewLink(fileId)
-  const message = `New flyer posted.\n ${url}`
+  const message = `New flyer was posted.\n ${url}`
   await axios.post(webhookURL, { text: message })
 }
 
