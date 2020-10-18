@@ -15,7 +15,6 @@ async function sendAlert (flyers) {
 }
 
 async function upload (flyers) { 
-  console.log(flyers)
   const uploads = []
   for (const flyer of flyers) {
     try {
