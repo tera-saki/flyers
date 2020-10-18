@@ -6,8 +6,5 @@ const tokenPath = path.join(rootDir, 'token.json')
 
 const tmpDir = path.join(rootDir, 'tmp')
 const uploadDir = 'flyers'
-// fill in the blanks
-const crawlingURL = ''
-const webhookURL = ''
 
-module.exports = { credentialsPath, tokenPath, tmpDir, uploadDir, crawlingURL, webhookURL }
+module.exports = { credentialsPath, tokenPath, tmpDir, uploadDir }

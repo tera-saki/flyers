@@ -1,10 +1,12 @@
 const { crawl } = require('./crawler')
-const { uploadPDF } = require('./uploader')
+const { accumlate } = require('./accumlator')
+const { upload } = require('./uploader')
 
 async function main () {
   try {
-    await crawl()
-    await uploadPDF()
+    const flyers = await crawl()
+    const newFlyers = await accumlate(flyers)
+    await upload(newFlyers)
   } catch (e) {
     console.error(e)
   } 

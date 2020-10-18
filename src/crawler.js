@@ -1,11 +1,10 @@
-const path = require('path')
 const util = require('util')
 const exec = util.promisify(require('child_process').exec)
-const { DateTime } = require('luxon') 
 const { Builder, By, Key, until } = require('selenium-webdriver')
 const { Options } = require('selenium-webdriver/chrome')
 
-const { crawlingURL, tmpDir } = require('./config')
+const { allSettled } = require('./util')
+const { crawlingURL } = require('../config/setting')
 
 async function createDriver () {
   const options = new Options().addArguments(['--headless', '--window-size=1280,1024'])
@@ -15,38 +14,33 @@ async function createDriver () {
     .build()
 }
 
+async function extractTitleAndURL (flyer) {
+  const pdfButton = await flyer.findElement(By.className('shufoo-pdf'))
+  // headless chrome cannot deal with redirect roperly.
+  const link = await pdfButton.findElement(By.css('a')).getAttribute('href')
+  const { stdout } = await exec(`curl -s '${link}'`)
+  const regex_r = /<meta http-equiv="refresh" content="0;URL=(.+\.pdf)\?/
+  const url = regex_r.exec(stdout)[1]
+  const titleWrap = await flyer.findElement(By.className('shufoo-title'))
+  const title = await titleWrap.findElement(By.css('a')).getText()
+  return { url, title }
+}
+
 async function doCrawl (driver) {
   await driver.get(crawlingURL)
   await driver.wait(until.elementLocated(By.className('shufoo-pdf')))
-  const flyers = await driver.findElements(By.className('shufoo-chirashi_wrapper'))
-  
-  let count = 0
-  for (const flyer of flyers) {
-    const pdfButton = await flyer.findElement(By.className('shufoo-pdf'))
-    // headless chrome cannot deal with redirect roperly.
-    const link = await pdfButton.findElement(By.css('a')).getAttribute('href')
-    const { stdout } = await exec(`curl -s '${link}'`)
-    const regex_r = /<meta http-equiv="refresh" content="0;URL=(.+\.pdf)\?/
-    const redirectURL = regex_r.exec(stdout)[1]
-    const regex_d = /c\/([0-9/]+)\/c/
-    const postingDay = regex_d.exec(redirectURL)[1].replace(/\//g, '-')
-    const today = DateTime.local().toISODate()
-    
-    if (postingDay === today) {
-      const name = `${postingDay}-${count}.pdf`
-      await exec(`wget ${redirectURL} -O ${path.join(tmpDir, name)}`)
-      ++count
-    }  
-  }
+  const flyerWrappers = await driver.findElements(By.className('shufoo-chirashi_wrapper'))
+  return await allSettled(extractTitleAndURL, flyerWrappers)
 }
 
 async function crawl () {
   const driver = await createDriver()
 
   try {
-    await doCrawl(driver)
+    const flyers = await doCrawl(driver)
+    return flyers
   } catch (e) {
-    throw new Error(e)
+    console.error(e)
   } finally {
     await driver.quit()
   }

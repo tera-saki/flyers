@@ -2,6 +2,8 @@
   "dependencies": {
     "axios": "^0.20.0",
     "googleapis": "^61.0.0",
+    "ioredis": "^4.17.3",
+    "lodash": "^4.17.20",
     "luxon": "^1.25.0",
     "selenium-webdriver": "^4.0.0-alpha.7"
   }

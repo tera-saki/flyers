@@ -1,29 +1,35 @@
-const path = require('path')
 const fs = require('fs')
 const axios = require('axios')
 
-const { credentialsPath, tokenPath, tmpDir, uploadDir, webhookURL } = require('./config')
+const { credentialsPath, tokenPath, uploadDir } = require('./common')
+const { webhookURL } = require('../config/setting')
 const GoogleDrive = require('./GoogleDrive')
 const googleDrive = new GoogleDrive(credentialsPath, tokenPath)
 
-async function sendAlert (res) {
-  const fileId = res.data.id
-  const url = await googleDrive.getWebViewLink(fileId)
-  const message = `New flyer was posted.\n ${url}`
+async function sendAlert (flyers) {
+  let message = ''
+  for (const flyer of flyers) {
+    message += `${flyer.title}\n${flyer.viewLink}\n`
+  }
   await axios.post(webhookURL, { text: message })
 }
 
-async function uploadPDF () {
-  const pdfs = fs.readdirSync(tmpDir).map(file => path.join(tmpDir, file))
-  for (const pdf of pdfs) {
+async function upload (flyers) { 
+  console.log(flyers)
+  const uploads = []
+  for (const flyer of flyers) {
     try {
-      const res = await googleDrive.upload(pdf, { dir: uploadDir })
-      await sendAlert(res)
-      fs.unlinkSync(pdf)
+      const res = await googleDrive.upload(flyer.tmpSavedPath, { dir: uploadDir })
+      flyer.viewLink = await googleDrive.getWebViewLink(res.data.id)
+      uploads.push(flyer)
+      fs.unlinkSync(flyer.tmpSavedPath)
     } catch (e) {
       console.error(e)
     }
   }
+  if (uploads.length > 0) {
+    await sendAlert(uploads)
+  }
 }
 
-module.exports = { uploadPDF }
+module.exports = { upload }
